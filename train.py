@@ -79,7 +79,7 @@ if __name__ == '__main__':
     
     model = model_dict[args.model]
     model  = model.to(device)
-    torch.save(model.state_dict(), '{}/models/dense_net{}.pkl'.format(LOGDIR,'_0'))
+    torch.save(model.state_dict(), '{}/models/{}{}.pkl'.format(LOGDIR, args.model, '_0'))
     model.train()
     nparams = get_nparams(model)
     

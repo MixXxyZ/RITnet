@@ -112,7 +112,7 @@ class Line_augment(object):
         for i in np.arange(0, num_lines):
             theta = np.pi*np.random.rand(1)
             x1, y1, x2, y2 = getRandomLine(xc, yc, theta)
-            aug_base = cv2.line(aug_base, (x1, y1), (x2, y2), (255, 255, 255), 4)
+            aug_base = cv2.line(aug_base, (int(x1[0]), int(y1[0])), (int(x2[0]), int(y2[0])), (255, 255, 255), 4)
         aug_base = aug_base.astype(np.uint8)
         return Image.fromarray(aug_base)       
         
@@ -137,7 +137,7 @@ class IrisDataset(Dataset):
         
         #PREPROCESSING STEP FOR ALL TRAIN, VALIDATION AND TEST INPUTS 
         #local Contrast limited adaptive histogram equalization algorithm
-        self.clahe = cv2.createCLAHE(clipLimit=1.5, tileGridSize=(8,8))
+        # self.clahe = cv2.createCLAHE(clipLimit=1.5, tileGridSize=(8,8))
 
     def __len__(self):
         if self.testrun:
@@ -172,7 +172,8 @@ class IrisDataset(Dataset):
                 if random.random() < 0.4:
                     pilimg, label = Translation()(np.array(pilimg),np.array(label))
                 
-        img = self.clahe.apply(np.array(np.uint8(pilimg)))    
+        # img = self.clahe.apply(np.array(np.uint8(pilimg)))    
+        img = cv2.equalizeHist(np.array(np.uint8(pilimg)))
         img = Image.fromarray(img)      
             
         if self.transform is not None:
