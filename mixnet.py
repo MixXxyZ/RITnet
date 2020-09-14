@@ -308,11 +308,12 @@ class MixNet(nn.Module):
         # self.brm1_dec = _BoundaryRefineModule(out_channels, squeeze_ratio=1, expand1x1_ratio=0, dilation_paths=1)
         #############################################
 
-        self._initialize_weights()
+        if init_weights:
+            self._initialize_weights()
         
     def _initialize_weights(self):
         for m in self.modules():
-            if isinstance(m, nn.Conv2d):
+            if isinstance(m, nn.Conv2d) or isinstance(m, nn.ConvTranspose2d):
                 n = m.kernel_size[0] * m.kernel_size[1] * m.out_channels
                 m.weight.data.normal_(0, math.sqrt(2. / n))
                 if m.bias is not None:

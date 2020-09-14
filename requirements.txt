@@ -1,4 +1,4 @@
-torchsummary
+torch-summary
 tqdm
 matplotlib
 numpy

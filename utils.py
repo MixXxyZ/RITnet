@@ -225,5 +225,15 @@ class Logger():
         self.log_file.write(msg)
         self.log_file.write('\n')
         self.log_file.flush()
-        print (msg)        
+        print (msg)     
 
+
+def calculateWeightUpdateRatio(model_params, learning_rate):   # Added by MixXxyZ
+    W = model_params.data
+    dW = model_params.grad.data
+    # assume parameter vector W and its gradient vector dW
+    param_scale = torch.norm(W)
+    update = -learning_rate*dW # simple SGD update
+    update_scale = torch.norm(update)
+    
+    return update_scale.item() / param_scale.item() # want ~1e-3

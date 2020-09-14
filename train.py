@@ -10,7 +10,8 @@ from models import model_dict
 from torch.utils.data import DataLoader 
 from dataset import IrisDataset
 import torch
-from utils import mIoU, CrossEntropyLoss2d,total_metric,get_nparams,Logger,GeneralizedDiceLoss,SurfaceLoss
+from utils import mIoU, CrossEntropyLoss2d,total_metric,get_nparams,Logger,GeneralizedDiceLoss,SurfaceLoss,calculateWeightUpdateRatio
+from logger import Logger as TSBoardLogger
 import numpy as np
 from dataset import transform
 from opt import parse_args
@@ -60,10 +61,10 @@ if __name__ == '__main__':
 
     if args.useGPU:
         device=torch.device("cuda")
-        torch.cuda.manual_seed(12)
+        torch.cuda.manual_seed(args.seed)
     else:
         device=torch.device("cpu")
-        torch.manual_seed(12)
+        torch.manual_seed(args.seed)
         
     torch.backends.cudnn.deterministic=False
     
@@ -76,10 +77,11 @@ if __name__ == '__main__':
     os.makedirs(LOGDIR,exist_ok=True)
     os.makedirs(LOGDIR+'/models',exist_ok=True)
     logger = Logger(os.path.join(LOGDIR,'logs.log'))
+    ts_logger = TSBoardLogger(os.path.join(LOGDIR,'ts_logs.log'))
     
     model = model_dict[args.model]
     model  = model.to(device)
-    torch.save(model.state_dict(), '{}/models/{}{}.pkl'.format(LOGDIR, args.model, '_0'))
+    torch.save(model.state_dict(), '{}/models/{}_{}.pkl'.format(LOGDIR, args.model, 0))
     model.train()
     nparams = get_nparams(model)
     
@@ -155,16 +157,49 @@ if __name__ == '__main__':
             optimizer.step()
             
         logger.write('Epoch:{}, Train mIoU: {}'.format(epoch,np.average(ious)))
+        ts_logger.scalar_summary('Train_mIoU', np.average(ious), epoch)
         lossvalid , miou = lossandaccuracy(validloader,model,alpha[epoch])
         totalperf = total_metric(nparams,miou)
         f = 'Epoch:{}, Valid Loss: {:.3f} mIoU: {} Complexity: {} total: {}'
         logger.write(f.format(epoch,lossvalid, miou,nparams,totalperf))
+        ts_logger.scalar_summary('Valid_Loss', lossvalid, epoch)
+        ts_logger.scalar_summary('Valid_mIoU', miou, epoch)
+        ts_logger.scalar_summary('Valid_totalPerf', totalperf, epoch)
         
         scheduler.step(lossvalid)
             
-        ##save the model every epoch
+        ##save the model, tensorboard logging every epoch
         if epoch %1 == 0:
-            torch.save(model.state_dict(), '{}/models/dense_net{}.pkl'.format(LOGDIR,epoch))
+            torch.save(model.state_dict(), '{}/models/{}_{}.pkl'.format(LOGDIR, args.model,epoch))
+
+            # ================================================================== #
+            #                        Tensorboard Logging                         #
+            # ================================================================== #
+            
+            info = {}
+            current_lr = scheduler.get_last_lr()
+            for tag, value in model.named_parameters():
+                tag = tag.replace('.', '/')
+                info[tag+'/mean'] = value.data.mean().item()
+                info[tag+'/min'] = value.data.min().item()
+                info[tag+'/max'] = value.data.max().item()
+                info[tag+'/std'] = value.data.std().item()
+                if value.requires_grad:
+                    info[tag+'/grad/mean'] = value.grad.data.mean().item()
+                    info[tag+'/grad/min'] = value.grad.data.min().item()
+                    info[tag+'/grad/max'] = value.grad.data.max().item()
+                    info[tag+'/grad/std'] = value.grad.data.std().item()
+                    info[tag+'/WU_ratio'] = calculateWeightUpdateRatio(value, current_lr)
+
+            for tag, value in info.items():
+                ts_logger.scalar_summary(tag, value, epoch)
+
+            # 2. Log values and gradients of the parameters (histogram summary)
+            for tag, value in model.named_parameters():
+                tag = tag.replace('.', '/')
+                ts_logger.histo_summary(tag, value.data.cpu().numpy(), epoch)
+                if value.requires_grad:
+                    ts_logger.histo_summary(tag+'/grad', value.grad.data.cpu().numpy(), epoch)
 
         ##visualize the ouput every 5 epoch
         if epoch %5 ==0:
