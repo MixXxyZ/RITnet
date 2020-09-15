@@ -50,9 +50,9 @@ if __name__ == '__main__':
                              shuffle=False, num_workers=2)
     counter=0
     
-    os.makedirs('test/labels/',exist_ok=True)
-    os.makedirs('test/output/',exist_ok=True)
-    os.makedirs('test/mask/',exist_ok=True)
+    os.makedirs('test/{}/final/labels/'.format(args.expname),exist_ok=True)
+    os.makedirs('test/{}/final/output/'.format(args.expname),exist_ok=True)
+    os.makedirs('test/{}/final/mask/'.format(args.expname),exist_ok=True)
     
     with torch.no_grad():
         for i, batchdata in tqdm(enumerate(testloader),total=len(testloader)):
@@ -61,9 +61,9 @@ if __name__ == '__main__':
             output = model(data)            
             predict = get_predictions(output)
             for j in range (len(index)):       
-                np.save('test/labels/{}.npy'.format(index[j]),predict[j].cpu().numpy())
+                np.save('test/{}/final/labels/{}.npy'.format(args.expname, index[j]),predict[j].cpu().numpy())
                 try:
-                    plt.imsave('test/output/{}.jpg'.format(index[j]),255*labels[j].cpu().numpy())
+                    plt.imsave('test/{}/final/output/{}.jpg'.format(args.expname, index[j]),255*labels[j].cpu().numpy())
                 except:
                     pass
                 
@@ -72,6 +72,6 @@ if __name__ == '__main__':
                 img_orig = np.clip(inp,0,1)
                 img_orig = np.array(img_orig)
                 combine = np.hstack([img_orig,pred_img])
-                plt.imsave('test/mask/{}.jpg'.format(index[j]),combine)
+                plt.imsave('test/{}/final/mask/{}.jpg'.format(args.expname, index[j]),combine)
 
-    os.rename('test',args.save)
+    # os.rename('test',args.save)

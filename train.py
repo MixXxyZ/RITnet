@@ -77,6 +77,8 @@ if __name__ == '__main__':
     os.makedirs(LOGDIR,exist_ok=True)
     os.makedirs(LOGDIR+'/models',exist_ok=True)
     logger = Logger(os.path.join(LOGDIR,'logs.log'))
+    logger.write_summary('<<< Script parameters >>>')
+    logger.write_summary(str(args))
     ts_logger = TSBoardLogger(os.path.join(LOGDIR,'ts_logs.log'))
     
     model = model_dict[args.model]
@@ -203,9 +205,9 @@ if __name__ == '__main__':
 
         ##visualize the ouput every 5 epoch
         if epoch %5 ==0:
-            os.makedirs('test/epoch/labels/',exist_ok=True)
-            os.makedirs('test/epoch/output/',exist_ok=True)
-            os.makedirs('test/epoch/mask/',exist_ok=True)
+            os.makedirs('test/{}/epoch_{}/labels/'.format(args.expname, epoch),exist_ok=True)
+            os.makedirs('test/{}/epoch_{}/output/'.format(args.expname, epoch),exist_ok=True)
+            os.makedirs('test/{}/epoch_{}/mask/'.format(args.expname, epoch),exist_ok=True)
             
             with torch.no_grad():
                 for i, batchdata in tqdm(enumerate(testloader),total=len(testloader)):
@@ -214,9 +216,9 @@ if __name__ == '__main__':
                     output = model(data)            
                     predict = get_predictions(output)
                     for j in range (len(index)):       
-                        np.save('test/epoch/labels/{}.npy'.format(index[j]),predict[j].cpu().numpy())
+                        np.save('test/{}/epoch_{}/labels/{}.npy'.format(args.expname, epoch, index[j]),predict[j].cpu().numpy())
                         try:
-                            plt.imsave('test/epoch/output/{}.jpg'.format(index[j]),255*labels[j].cpu().numpy())
+                            plt.imsave('test/{}/epoch_{}/output/{}.jpg'.format(args.expname, epoch, index[j]),255*labels[j].cpu().numpy())
                         except:
                             pass
                         pred_img = predict[j].cpu().numpy()/3.0
@@ -224,5 +226,5 @@ if __name__ == '__main__':
                         img_orig = np.clip(inp,0,1)
                         img_orig = np.array(img_orig)
                         combine = np.hstack([img_orig,pred_img])
-                        plt.imsave('test/epoch/mask/{}.jpg'.format(index[j]),combine)
+                        plt.imsave('test/{}/epoch_{}/mask/{}.jpg'.format(args.expname, epoch, index[j]),combine)
 
