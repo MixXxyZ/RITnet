@@ -49,19 +49,22 @@ def clahe(img,clipLimit,nrBins=128,nrX=0,nrY=0):
         #Taking dimensions of each contextial region to be a square of 32X32
         xsz = 32
         ysz = 32
-        nrX = math.ceil(h/xsz)#240
-        #Excess number of pixels to get an integer value of nrX and nrY
-        excX= int(xsz*(nrX-h/xsz))
-        nrY = math.ceil(w/ysz)#320
-        excY= int(ysz*(nrY-w/ysz))
-        #Pad that number of pixels to the image
-        if excX!=0:
-            img = np.append(img,np.zeros((excX,img.shape[1])).astype(int),axis=0)
-        if excY!=0:
-            img = np.append(img,np.zeros((img.shape[0],excY)).astype(int),axis=1)
     else:
         xsz = round(h/nrX)
         ysz = round(w/nrY)
+
+    ###########################################
+    nrX = math.ceil(h/xsz)#240
+    #Excess number of pixels to get an integer value of nrX and nrY
+    excX= int(xsz*(nrX-h/xsz))
+    nrY = math.ceil(w/ysz)#320
+    excY= int(ysz*(nrY-w/ysz))
+    #Pad that number of pixels to the image
+    if excX!=0:
+        img = np.append(img,np.zeros((excX,img.shape[1])).astype(int),axis=0)
+    if excY!=0:
+        img = np.append(img,np.zeros((img.shape[0],excY)).astype(int),axis=1)
+    ###########################################
     
     nrPixels = xsz*ysz
     xsz2 = round(xsz/2)
