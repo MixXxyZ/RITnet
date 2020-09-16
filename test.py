@@ -62,10 +62,11 @@ if __name__ == '__main__':
             predict = get_predictions(output)
             for j in range (len(index)):       
                 np.save('test/{}/final/labels/{}.npy'.format(args.expname, index[j]),predict[j].cpu().numpy())
-                try:
-                    plt.imsave('test/{}/final/output/{}.jpg'.format(args.expname, index[j]),255*labels[j].cpu().numpy())
-                except:
-                    pass
+                # try:
+                #     plt.imsave('test/{}/final/output/{}.jpg'.format(args.expname, index[j]),255*labels[j].cpu().numpy())
+                # except Exception as err:
+                #     print('Error:', j, '>>', err)
+                #     pass
                 
                 pred_img = predict[j].cpu().numpy()/3.0
                 inp = img[j].squeeze() * 0.5 + 0.5
