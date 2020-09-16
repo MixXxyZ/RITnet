@@ -55,7 +55,7 @@ class EyeMMS(nn.Module):
         self.refinement3 = CascadedRefinement_block(input_channels=33, output_channels=16)    # 32 + 1
         self.refinement4 = CascadedRefinement_block(input_channels=17, output_channels=16)    # 16 + 1
         self.refinement5 = CascadedRefinement_block(input_channels=17, output_channels=16)     # 16 + 1
-        self.out_layer = nn.Conv2d(16, 1, kernel_size=(1,1),padding=(0,0))
+        self.out_layer = nn.Conv2d(16, out_channels, kernel_size=(1,1),padding=(0,0))
 
         if init_weights:
             self._initialize_weights()
