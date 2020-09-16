@@ -98,8 +98,9 @@ class EyeMMS(nn.Module):
 
         self.x5_pre = torch.cat((self.x4_up,self.x_down4),dim=1)
         self.x5 = self.refinement5(self.x5_pre)
+        self.x5_down = F.interpolate(self.x5,size=(640, 400),mode='nearest')
 
-        self.out = self.out_layer(self.x5)
+        self.out = self.out_layer(self.x5_down)
         
         return self.out
 
