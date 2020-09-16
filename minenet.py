@@ -1,7 +1,5 @@
 import torch.nn as nn
 import torch
-from torch.autograd import Variable
-from utils import initialize_weights
 
 class InitialBlock(nn.Module):
     """The initial block is composed of two branches:

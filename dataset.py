@@ -174,7 +174,8 @@ class IrisDataset(Dataset):
                     pilimg, label = Translation()(np.array(pilimg),np.array(label))
                 
         # img = self.clahe.apply(np.array(np.uint8(pilimg)))    
-        img = clahe.clahe(np.array(np.uint8(pilimg)), clipLimit=1.5, nrX=8, nrY=8)
+        # img = clahe.clahe(np.array(np.uint8(pilimg)), clipLimit=1.5, nrX=8, nrY=8)
+        img = cv2.equalizeHist(np.array(np.uint8(pilimg)))
         img = Image.fromarray(img)      
             
         if self.transform is not None:
