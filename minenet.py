@@ -44,7 +44,7 @@ class InitialBlock(nn.Module):
         # the extension branch
         self.main_branch = nn.Conv2d(
             in_channels,
-            out_channels - 3,
+            out_channels - in_channels,
             kernel_size=kernel_size,
             stride=2,
             padding=padding,
