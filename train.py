@@ -11,7 +11,7 @@ from torch.utils.data import DataLoader
 from dataset import IrisDataset
 import torch
 from utils import mIoU, CrossEntropyLoss2d,total_metric,get_nparams,Logger,GeneralizedDiceLoss,SurfaceLoss,calculateWeightUpdateRatio
-from logger import Logger as TSBoardLogger
+# from logger import Logger as TSBoardLogger
 import numpy as np
 from dataset import transform
 from opt import parse_args
@@ -76,8 +76,9 @@ if __name__ == '__main__':
     LOGDIR = 'logs/{}'.format(args.expname)
     os.makedirs(LOGDIR,exist_ok=True)
     os.makedirs(LOGDIR+'/models',exist_ok=True)
+    os.makedirs(LOGDIR+'/summary',exist_ok=True)
     logger = Logger(os.path.join(LOGDIR,'logs.log'))
-    ts_logger = TSBoardLogger(os.path.join(LOGDIR,'ts_logs.log'))
+    # ts_logger = TSBoardLogger(os.path.join(LOGDIR,'ts_logs.log'))
     
     model = model_dict[args.model]
     model  = model.to(device)
@@ -127,6 +128,10 @@ if __name__ == '__main__':
     if args.epochs>125:
         alpha[125:]=1
     ious = []        
+    epoch_ious = []
+    epoch_valid_loss = []
+    epoch_valid_miou = []
+    epoch_totalperf = []
     for epoch in range(args.epochs):
         for i, batchdata in enumerate(trainloader):
 #            print (len(batchdata))
@@ -157,14 +162,18 @@ if __name__ == '__main__':
             optimizer.step()
             
         logger.write('Epoch:{}, Train mIoU: {}'.format(epoch,np.average(ious)))
-        ts_logger.scalar_summary('Train_mIoU', np.average(ious), epoch)
+        # ts_logger.scalar_summary('Train_mIoU', np.average(ious), epoch)
+        epoch_ious.append(np.average(ious))
         lossvalid , miou = lossandaccuracy(validloader,model,alpha[epoch])
         totalperf = total_metric(nparams,miou)
         f = 'Epoch:{}, Valid Loss: {:.3f} mIoU: {} Complexity: {} total: {}'
         logger.write(f.format(epoch,lossvalid, miou,nparams,totalperf))
-        ts_logger.scalar_summary('Valid_Loss', lossvalid, epoch)
-        ts_logger.scalar_summary('Valid_mIoU', miou, epoch)
-        ts_logger.scalar_summary('Valid_totalPerf', totalperf, epoch)
+        # ts_logger.scalar_summary('Valid_Loss', lossvalid, epoch)
+        # ts_logger.scalar_summary('Valid_mIoU', miou, epoch)
+        # ts_logger.scalar_summary('Valid_totalPerf', totalperf, epoch)
+        epoch_valid_loss.append(lossvalid)
+        epoch_valid_miou.append(miou)
+        epoch_totalperf.append(totalperf)
         
         scheduler.step(lossvalid)
             
@@ -176,30 +185,30 @@ if __name__ == '__main__':
             #                        Tensorboard Logging                         #
             # ================================================================== #
             
-            info = {}
-            current_lr = scheduler.get_last_lr()
-            for tag, value in model.named_parameters():
-                tag = tag.replace('.', '/')
-                info[tag+'/mean'] = value.data.mean().item()
-                info[tag+'/min'] = value.data.min().item()
-                info[tag+'/max'] = value.data.max().item()
-                info[tag+'/std'] = value.data.std().item()
-                if value.requires_grad:
-                    info[tag+'/grad/mean'] = value.grad.data.mean().item()
-                    info[tag+'/grad/min'] = value.grad.data.min().item()
-                    info[tag+'/grad/max'] = value.grad.data.max().item()
-                    info[tag+'/grad/std'] = value.grad.data.std().item()
-                    info[tag+'/WU_ratio'] = calculateWeightUpdateRatio(value, current_lr)
+            # info = {}
+            # current_lr = scheduler.get_last_lr()
+            # for tag, value in model.named_parameters():
+            #     tag = tag.replace('.', '/')
+            #     info[tag+'/mean'] = value.data.mean().item()
+            #     info[tag+'/min'] = value.data.min().item()
+            #     info[tag+'/max'] = value.data.max().item()
+            #     info[tag+'/std'] = value.data.std().item()
+            #     if value.requires_grad:
+            #         info[tag+'/grad/mean'] = value.grad.data.mean().item()
+            #         info[tag+'/grad/min'] = value.grad.data.min().item()
+            #         info[tag+'/grad/max'] = value.grad.data.max().item()
+            #         info[tag+'/grad/std'] = value.grad.data.std().item()
+            #         info[tag+'/WU_ratio'] = calculateWeightUpdateRatio(value, current_lr)
 
-            for tag, value in info.items():
-                ts_logger.scalar_summary(tag, value, epoch)
+            # for tag, value in info.items():
+            #     ts_logger.scalar_summary(tag, value, epoch)
 
-            # 2. Log values and gradients of the parameters (histogram summary)
-            for tag, value in model.named_parameters():
-                tag = tag.replace('.', '/')
-                ts_logger.histo_summary(tag, value.data.cpu().numpy(), epoch)
-                if value.requires_grad:
-                    ts_logger.histo_summary(tag+'/grad', value.grad.data.cpu().numpy(), epoch)
+            # # 2. Log values and gradients of the parameters (histogram summary)
+            # for tag, value in model.named_parameters():
+            #     tag = tag.replace('.', '/')
+            #     ts_logger.histo_summary(tag, value.data.cpu().numpy(), epoch)
+            #     if value.requires_grad:
+            #         ts_logger.histo_summary(tag+'/grad', value.grad.data.cpu().numpy(), epoch)
 
         ##visualize the ouput every 5 epoch
         if epoch %5 ==0:
@@ -225,4 +234,12 @@ if __name__ == '__main__':
                         img_orig = np.array(img_orig)
                         combine = np.hstack([img_orig,pred_img])
                         plt.imsave('test/epoch/mask/{}.jpg'.format(index[j]),combine)
+
+    #############################################
+    # PROCESSING AFTER TRAINING END ...
+
+    np.save('{}/summary/train_miou.npy'.format(LOGDIR), np.concatenate(epoch_ious, axis=0))
+    np.save('{}/summary/valid_loss.npy'.format(LOGDIR), np.concatenate(epoch_valid_loss, axis=0))
+    np.save('{}/summary/valid_miou.npy'.format(LOGDIR), np.concatenate(epoch_valid_miou, axis=0))
+    np.save('{}/summary/valid_totalperf.npy'.format(LOGDIR), np.concatenate(epoch_totalperf, axis=0))
 
