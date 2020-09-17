@@ -211,6 +211,9 @@ class MobileNetV2_CS(nn.Module):
                 # m.bias.data.zero_()
 
     def forward(self, x):
+
+        x = F.interpolate(x,size=(320, 200),mode='bilinear')
+
         x = self.features(x)
 
         x1 = self.segm_part1(x)
