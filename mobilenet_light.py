@@ -222,7 +222,7 @@ class MobileNetV2_CS(nn.Module):
         x = x1_seg + x1_up
         
         x_softmax = F.softmax(x, dim=1)
-        sgm = torch.argmax(x_softmax, dim=1)
-        
+        # sgm = torch.argmax(x_softmax, dim=1)    # original
+
         # return x_softmax, sgm    # original
-        return sgm
+        return x_softmax
