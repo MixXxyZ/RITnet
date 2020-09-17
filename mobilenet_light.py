@@ -208,7 +208,7 @@ class MobileNetV2_CS(nn.Module):
             elif isinstance(m, nn.Linear):
                 n = m.weight.size(1)
                 m.weight.data.normal_(0, 0.01)
-                m.bias.data.zero_()
+                # m.bias.data.zero_()
 
     def forward(self, x):
         x = self.features(x)
