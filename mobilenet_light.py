@@ -166,11 +166,11 @@ class MobileNetV2_CS(nn.Module):
         c_segmentation = [64, num_classes]
 
         segmentation_part1 = [ConvReLU(c_segmentation[0], c_segmentation[0], kernel_size=1),
-                              nn.Upsample(scale_factor=2.0, mode='bilinear',
+                              nn.Upsample(scale_factor=4.0, mode='bilinear',
                                           align_corners=False)]
 
         up_part1 = [ConvReLU(c_segmentation[0], c_segmentation[1], kernel_size=1),
-                    nn.Upsample(scale_factor=2.0, mode='bilinear', align_corners=False),
+                    nn.Upsample(scale_factor=4.0, mode='bilinear', align_corners=False),
                     SELayer(channel=c_segmentation[1], reduction=4)]
 
         self.up_part1 = nn.Sequential(*up_part1)
@@ -178,7 +178,7 @@ class MobileNetV2_CS(nn.Module):
         conv_up = [ConvReLU(c_segmentation[0], c_segmentation[1], kernel_size=kn_size),
                    ConvReLU(c_segmentation[1], c_segmentation[1], kernel_size=kn_size),
                    ConvReLU(c_segmentation[1], c_segmentation[1], kernel_size=kn_size),
-                   nn.Upsample(scale_factor=2.0, mode='bilinear', align_corners=False)]
+                   nn.Upsample(scale_factor=4.0, mode='bilinear', align_corners=False)]
         self.conv_up_part1 = nn.Sequential(*conv_up)
 
         self.segm_part1 = nn.Sequential(*segmentation_part1)
