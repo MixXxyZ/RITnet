@@ -241,8 +241,8 @@ if __name__ == '__main__':
     #############################################
     # PROCESSING AFTER TRAINING END ...
 
-    np.save('{}/summary/train_miou.npy'.format(LOGDIR), np.concatenate(epoch_ious, axis=0))
-    np.save('{}/summary/valid_loss.npy'.format(LOGDIR), np.concatenate(epoch_valid_loss, axis=0))
-    np.save('{}/summary/valid_miou.npy'.format(LOGDIR), np.concatenate(epoch_valid_miou, axis=0))
-    np.save('{}/summary/valid_totalperf.npy'.format(LOGDIR), np.concatenate(epoch_totalperf, axis=0))
+    np.save('{}/summary/train_miou.npy'.format(LOGDIR), np.array(epoch_ious))
+    np.save('{}/summary/valid_loss.npy'.format(LOGDIR), np.array(epoch_valid_loss))
+    np.save('{}/summary/valid_miou.npy'.format(LOGDIR), np.array(epoch_valid_miou))
+    np.save('{}/summary/valid_totalperf.npy'.format(LOGDIR), np.array(epoch_totalperf))
 
