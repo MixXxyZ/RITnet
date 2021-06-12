@@ -49,6 +49,9 @@ def lossandaccuracy(loader,model,factor):
             predict = get_predictions(output)
             iou = mIoU(predict,labels)
             ious.append(iou)
+
+    model.train()
+
     return np.average(epoch_loss),np.average(ious)
 
 #%%
@@ -74,9 +77,12 @@ if __name__ == '__main__':
         exit(1)
     
     LOGDIR = 'logs/{}'.format(args.expname)
+    VALIDATIONDIR = 'validation/{}'.format(args.expname)
     os.makedirs(LOGDIR,exist_ok=True)
     os.makedirs(LOGDIR+'/models',exist_ok=True)
     os.makedirs(LOGDIR+'/summary',exist_ok=True)
+    os.makedirs(VALIDATIONDIR,exist_ok=True)
+
     logger = Logger(os.path.join(LOGDIR,'logs.log'))
     # ts_logger = TSBoardLogger(os.path.join(LOGDIR,'ts_logs.log'))
     logger.write_summary('<<< Script parameters >>>')
@@ -84,7 +90,16 @@ if __name__ == '__main__':
     
     model = model_dict[args.model]
     model  = model.to(device)
-    torch.save(model.state_dict(), '{}/models/{}_{}.pkl'.format(LOGDIR, args.model, 0))
+    if args.load is not None:
+        filename = args.load
+        if not os.path.exists(filename):
+            print("model path not found !!!")
+            exit(1)
+            
+        model.load_state_dict(torch.load(filename))
+        model = model.to(device)
+
+    torch.save(model.state_dict(), '{}/models/{}_{}.pkl'.format(LOGDIR, args.model, args.start_epoch))
     model.train()
     nparams = get_nparams(model)
     
@@ -129,12 +144,8 @@ if __name__ == '__main__':
     alpha[0:np.min([125,args.epochs])]=1 - np.arange(1,np.min([125,args.epochs])+1)/np.min([125,args.epochs])
     if args.epochs>125:
         alpha[125:]=1
-    ious = []        
-    epoch_ious = []
-    epoch_valid_loss = []
-    epoch_valid_miou = []
-    epoch_totalperf = []
-    for epoch in range(args.epochs):
+    ious = []
+    for epoch in range(args.start_epoch, args.epochs):
         for i, batchdata in enumerate(trainloader):
 #            print (len(batchdata))
             img,labels,index,spatialWeights,maxDist= batchdata
@@ -164,18 +175,17 @@ if __name__ == '__main__':
             optimizer.step()
             
         logger.write('Epoch:{}, Train mIoU: {}'.format(epoch,np.average(ious)))
-        # ts_logger.scalar_summary('Train_mIoU', np.average(ious), epoch)
-        epoch_ious.append(np.average(ious))
         lossvalid , miou = lossandaccuracy(validloader,model,alpha[epoch])
         totalperf = total_metric(nparams,miou)
         f = 'Epoch:{}, Valid Loss: {:.3f} mIoU: {} Complexity: {} total: {}'
         logger.write(f.format(epoch,lossvalid, miou,nparams,totalperf))
+        # ts_logger.scalar_summary('Train_mIoU', np.average(ious), epoch)
         # ts_logger.scalar_summary('Valid_Loss', lossvalid, epoch)
         # ts_logger.scalar_summary('Valid_mIoU', miou, epoch)
         # ts_logger.scalar_summary('Valid_totalPerf', totalperf, epoch)
-        epoch_valid_loss.append(lossvalid)
-        epoch_valid_miou.append(miou)
-        epoch_totalperf.append(totalperf)
+        train_stats_file = open('{}/summary/training_stats.csv'.format(LOGDIR), 'a+')
+        train_stats_file.write('{},{},{},{}\n'.format(np.average(ious), lossvalid, miou, totalperf))
+        train_stats_file.close()
         
         scheduler.step(lossvalid)
             
@@ -214,11 +224,37 @@ if __name__ == '__main__':
 
         ##visualize the ouput every 5 epoch
         if epoch %5 ==0:
+            os.makedirs('validation/{}/epoch_{}/labels/'.format(args.expname, epoch),exist_ok=True)
+            os.makedirs('validation/{}/epoch_{}/output/'.format(args.expname, epoch),exist_ok=True)
+            os.makedirs('validation/{}/epoch_{}/mask/'.format(args.expname, epoch),exist_ok=True)
+            
             os.makedirs('test/{}/epoch_{}/labels/'.format(args.expname, epoch),exist_ok=True)
             os.makedirs('test/{}/epoch_{}/output/'.format(args.expname, epoch),exist_ok=True)
             os.makedirs('test/{}/epoch_{}/mask/'.format(args.expname, epoch),exist_ok=True)
             
             with torch.no_grad():
+
+                # Validation set
+                for i, batchdata in tqdm(enumerate(validloader),total=len(validloader)):
+                    img,labels,index,x,maxDist= batchdata
+                    data = img.to(device)       
+                    output = model(data)            
+                    predict = get_predictions(output)
+                    for j in range (len(index)):       
+                        np.save('validation/{}/epoch_{}/labels/{}.npy'.format(args.expname, epoch, index[j]),predict[j].cpu().numpy())
+                        try:
+                            plt.imsave('validation/{}/epoch_{}/output/{}.jpg'.format(args.expname, epoch, index[j]),255*labels[j].cpu().numpy())
+                        except Exception as err:
+                            print('Error:', j, '>>', err)
+                            pass
+                        pred_img = predict[j].cpu().numpy()/3.0
+                        inp = img[j].squeeze() * 0.5 + 0.5
+                        img_orig = np.clip(inp,0,1)
+                        img_orig = np.array(img_orig)
+                        combine = np.hstack([img_orig,pred_img])
+                        plt.imsave('validation/{}/epoch_{}/mask/{}.jpg'.format(args.expname, epoch, index[j]),combine)
+
+                # Test set
                 for i, batchdata in tqdm(enumerate(testloader),total=len(testloader)):
                     img,labels,index,x,maxDist= batchdata
                     data = img.to(device)       
@@ -226,11 +262,11 @@ if __name__ == '__main__':
                     predict = get_predictions(output)
                     for j in range (len(index)):       
                         np.save('test/{}/epoch_{}/labels/{}.npy'.format(args.expname, epoch, index[j]),predict[j].cpu().numpy())
-                        # try:
-                        #     plt.imsave('test/{}/epoch_{}/output/{}.jpg'.format(args.expname, epoch, index[j]),255*labels[j].cpu().numpy())
-                        # except Exception as err:
-                        #     print('Error:', j, '>>', err)
-                        #     pass
+                        try:
+                            plt.imsave('test/{}/epoch_{}/output/{}.jpg'.format(args.expname, epoch, index[j]),255*labels[j].cpu().numpy())
+                        except Exception as err:
+                            print('Error:', j, '>>', err)
+                            pass
                         pred_img = predict[j].cpu().numpy()/3.0
                         inp = img[j].squeeze() * 0.5 + 0.5
                         img_orig = np.clip(inp,0,1)
@@ -239,10 +275,4 @@ if __name__ == '__main__':
                         plt.imsave('test/{}/epoch_{}/mask/{}.jpg'.format(args.expname, epoch, index[j]),combine)
 
     #############################################
-    # PROCESSING AFTER TRAINING END ...
-
-    np.save('{}/summary/train_miou.npy'.format(LOGDIR), np.array(epoch_ious))
-    np.save('{}/summary/valid_loss.npy'.format(LOGDIR), np.array(epoch_valid_loss))
-    np.save('{}/summary/valid_miou.npy'.format(LOGDIR), np.array(epoch_valid_miou))
-    np.save('{}/summary/valid_totalperf.npy'.format(LOGDIR), np.array(epoch_totalperf))
 
