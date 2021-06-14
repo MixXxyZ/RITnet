@@ -242,11 +242,11 @@ if __name__ == '__main__':
                     predict = get_predictions(output)
                     for j in range (len(index)):       
                         np.save('validation/{}/epoch_{}/labels/{}.npy'.format(args.expname, epoch, index[j]),predict[j].cpu().numpy())
-                        try:
-                            plt.imsave('validation/{}/epoch_{}/output/{}.jpg'.format(args.expname, epoch, index[j]),255*labels[j].cpu().numpy())
-                        except Exception as err:
-                            print('Error:', j, '>>', err)
-                            pass
+                        # try:
+                        #     plt.imsave('validation/{}/epoch_{}/output/{}.jpg'.format(args.expname, epoch, index[j]),255*labels[j].cpu().numpy())
+                        # except Exception as err:
+                        #     print('Error:', j, '>>', err)
+                        #     pass
                         pred_img = predict[j].cpu().numpy()/3.0
                         inp = img[j].squeeze() * 0.5 + 0.5
                         img_orig = np.clip(inp,0,1)
@@ -262,11 +262,11 @@ if __name__ == '__main__':
                     predict = get_predictions(output)
                     for j in range (len(index)):       
                         np.save('test/{}/epoch_{}/labels/{}.npy'.format(args.expname, epoch, index[j]),predict[j].cpu().numpy())
-                        try:
-                            plt.imsave('test/{}/epoch_{}/output/{}.jpg'.format(args.expname, epoch, index[j]),255*labels[j].cpu().numpy())
-                        except Exception as err:
-                            print('Error:', j, '>>', err)
-                            pass
+                        # try:
+                        #     plt.imsave('test/{}/epoch_{}/output/{}.jpg'.format(args.expname, epoch, index[j]),255*labels[j].cpu().numpy())
+                        # except Exception as err:
+                        #     print('Error:', j, '>>', err)
+                        #     pass
                         pred_img = predict[j].cpu().numpy()/3.0
                         inp = img[j].squeeze() * 0.5 + 0.5
                         img_orig = np.clip(inp,0,1)
