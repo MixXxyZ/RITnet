@@ -496,7 +496,7 @@ class MinENet(nn.Module):
 
     """
 
-    def __init__(self, num_classes, encoder_relu=False, decoder_relu=True, init_weights=False):
+    def __init__(self, num_classes, encoder_relu=False, decoder_relu=False, init_weights=False):
         super().__init__()
 
         self.module_list = []
@@ -579,24 +579,24 @@ class MinENet(nn.Module):
 
         # Stage 4 - Decoder
         self.upsample4_0 = UpsamplingBottleneck(
-            128, 64, padding=1, dropout_prob=0.1, relu=decoder_relu)
+            128, 64, padding=1, dropout_prob=0, relu=decoder_relu)
         self.module_list.append(self.upsample4_0)
         self.regular4_1 = RegularBottleneck(
-            64, padding=1, dropout_prob=0.1, relu=decoder_relu)
+            64, padding=1, dropout_prob=0, relu=decoder_relu)
         self.module_list.append(self.regular4_1)
         self.regular4_2 = RegularBottleneck(
-            64, padding=1, dropout_prob=0.1, relu=decoder_relu)
+            64, padding=1, dropout_prob=0, relu=decoder_relu)
         self.module_list.append(self.regular4_2)
 
         # Stage 5 - Decoder
         self.upsample5_0 = UpsamplingBottleneck(
-            64, 16, padding=1, dropout_prob=0.1, relu=decoder_relu)
+            64, 64, padding=1, dropout_prob=0, relu=decoder_relu)
         self.module_list.append(self.upsample5_0)
         self.regular5_1 = RegularBottleneck(
-            16, padding=1, dropout_prob=0.1, relu=decoder_relu)
+            64, padding=1, dropout_prob=0, relu=decoder_relu)
         self.module_list.append(self.regular5_1)
         self.transposed_conv = nn.ConvTranspose2d(
-            16,
+            64,
             num_classes,
             kernel_size=3,
             stride=2,
@@ -624,7 +624,7 @@ class MinENet(nn.Module):
 
     def forward(self, x):
         # Initial block
-        x = self.initial_block(x)
+        x = self.initial_block(x, relu=False)
 
         # Stage 1 - Encoder
         x, max_indices1_0 = self.downsample1_0(x)
