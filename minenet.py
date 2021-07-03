@@ -767,21 +767,21 @@ class MinENet(nn.Module):
         self.module_list.append(self.dilated3_4)
 
         # Stage 4 - Decoder
-        self.upsample4_0 = UpsamplingBottleneck(
+        self.upsample4_0 = UpsamplingBottleneck_minenet(
             128, 64, padding=1, dropout_prob=0, relu=decoder_relu)
         self.module_list.append(self.upsample4_0)
-        self.regular4_1 = RegularBottleneck(
+        self.regular4_1 = RegularBottleneck_decode_minenet(
             64, padding=1, dropout_prob=0, relu=decoder_relu)
         self.module_list.append(self.regular4_1)
-        self.regular4_2 = RegularBottleneck(
+        self.regular4_2 = RegularBottleneck_decode_minenet(
             64, padding=1, dropout_prob=0, relu=decoder_relu)
         self.module_list.append(self.regular4_2)
 
         # Stage 5 - Decoder
-        self.upsample5_0 = UpsamplingBottleneck(
+        self.upsample5_0 = UpsamplingBottleneck_minenet(
             64, 64, padding=1, dropout_prob=0, relu=decoder_relu)
         self.module_list.append(self.upsample5_0)
-        self.regular5_1 = RegularBottleneck(
+        self.regular5_1 = RegularBottleneck_decode_minenet(
             64, padding=1, dropout_prob=0, relu=decoder_relu)
         self.module_list.append(self.regular5_1)
         self.transposed_conv = nn.ConvTranspose2d(
