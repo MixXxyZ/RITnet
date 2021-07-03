@@ -196,7 +196,7 @@ class RegularBottleneck(nn.Module):
                 bias=bias), nn.BatchNorm2d(channels), nn.Dropout2d(p=dropout_prob), activation)
 
         # PReLU layer to apply after adding the branches
-        self.out_prelu = activation
+        # self.out_prelu = activation
 
     def forward(self, x):
         # Main branch shortcut
@@ -210,7 +210,101 @@ class RegularBottleneck(nn.Module):
         # Add main and extension branches
         out = main + ext
 
-        return self.out_prelu(out)
+        # return self.out_prelu(out)
+        return out
+
+class RegularBottleneck_decode_minenet(nn.Module):
+    """Regular bottlenecks are the main building block of ENet.
+    Main branch:
+    1. Shortcut connection.
+
+    Extension branch:
+    1. regular convolution which decreases the number of channels by
+    ``internal_ratio``, also called a projection;
+    2. regular, dilated or asymmetric convolution;
+    3. regular convolution which increases the number of channels back to
+    ``channels``, also called an expansion;
+    4. dropout as a regularizer.
+
+    Keyword arguments:
+    - channels (int): the number of input and output channels.
+    - internal_ratio (int, optional): a scale factor applied to
+    ``channels`` used to compute the number of
+    channels after the projection. eg. given ``channels`` equal to 128 and
+    internal_ratio equal to 2 the number of channels after the projection
+    is 64. Default: 4.
+    - kernel_size (int, optional): the kernel size of the filters used in
+    the convolution layer described above in item 2 of the extension
+    branch. Default: 3.
+    - padding (int, optional): zero-padding added to both sides of the
+    input. Default: 0.
+    - dilation (int, optional): spacing between kernel elements for the
+    convolution described in item 2 of the extension branch. Default: 1.
+    asymmetric (bool, optional): flags if the convolution described in
+    item 2 of the extension branch is asymmetric or not. Default: False.
+    - dropout_prob (float, optional): probability of an element to be
+    zeroed. Default: 0 (no dropout).
+    - bias (bool, optional): Adds a learnable bias to the output if
+    ``True``. Default: False.
+    - relu (bool, optional): When ``True`` ReLU is used as the activation
+    function; otherwise, PReLU is used. Default: True.
+
+    """
+
+    def __init__(self,
+                 channels,
+                 kernel_size=3,
+                 padding=0,
+                 dilation=1,
+                 bias=False,
+                 relu=True):
+        super().__init__()
+
+        if relu:
+            activation = nn.ReLU()
+        else:
+            activation = nn.PReLU()
+
+        # Main branch - shortcut connection
+        #############################################
+
+        # Regular convolution
+        self.ext_conv1 = nn.Sequential(
+            nn.Conv2d(
+                channels,
+                channels,
+                kernel_size=kernel_size,
+                stride=1,
+                padding=padding,
+                dilation=dilation,
+                bias=bias), nn.BatchNorm2d(channels), activation)
+
+        self.ext_conv2 = nn.Sequential(
+            nn.Conv2d(
+                channels,
+                channels,
+                kernel_size=kernel_size,
+                stride=1,
+                padding=padding,
+                dilation=dilation,
+                bias=bias), nn.BatchNorm2d(channels), activation)
+
+        # PReLU layer to apply after adding the branches
+        # self.out_prelu = activation
+
+    def forward(self, x):
+        # Main branch shortcut
+        main = x
+
+        # Extension branch
+        ext = self.ext_conv1(x)
+        ext = self.ext_conv2(ext)
+
+        # Add main and extension branches
+        out = main + ext
+
+        # return self.out_prelu(out)
+        return out
 
 
 class DownsamplingBottleneck(nn.Module):
@@ -324,7 +418,7 @@ class DownsamplingBottleneck(nn.Module):
                 bias=bias), nn.BatchNorm2d(out_channels), nn.Dropout2d(p=dropout_prob), activation)
 
         # PReLU layer to apply after concatenating the branches
-        self.out_prelu = activation
+        # self.out_prelu = activation
 
     def forward(self, x):
         # Main branch shortcut
@@ -354,7 +448,8 @@ class DownsamplingBottleneck(nn.Module):
         # Add main and extension branches
         out = main + ext
 
-        return self.out_prelu(out), max_indices
+        # return self.out_prelu(out), max_indices
+        return out, max_indices
 
 
 class UpsamplingBottleneck(nn.Module):
@@ -465,7 +560,7 @@ class UpsamplingBottleneck(nn.Module):
                 bias=bias), nn.BatchNorm2d(out_channels), activation)
 
         # PReLU layer to apply after concatenating the branches
-        self.out_prelu = activation
+        # self.out_prelu = activation
 
     def forward(self, x, max_indices):
         # Main branch shortcut
@@ -479,8 +574,102 @@ class UpsamplingBottleneck(nn.Module):
         # Add main and extension branches
         out = main + ext
 
-        return self.out_prelu(out)
+        # return self.out_prelu(out)
+        return out
 
+class UpsamplingBottleneck_minenet(nn.Module):
+
+    def __init__(self,
+                 in_channels,
+                 out_channels,
+                 internal_ratio=4,
+                 kernel_size=3,
+                 padding=0,
+                 dropout_prob=0,
+                 bias=False,
+                 relu=True):
+        super().__init__()
+
+        # Check in the internal_scale parameter is within the expected range
+        # [1, channels]
+        if internal_ratio <= 1 or internal_ratio > in_channels:
+            raise RuntimeError("Value out of range. Expected value in the "
+                               "interval [1, {0}], got internal_scale={1}. "
+                               .format(in_channels, internal_ratio))
+
+        internal_channels = in_channels // internal_ratio
+
+        if relu:
+            activation = nn.ReLU()
+        else:
+            activation = nn.PReLU()
+
+        # Main branch - max pooling followed by feature map (channels) padding
+        self.main_conv1 = nn.Sequential(
+            nn.Conv2d(in_channels, in_channels, kernel_size=1, bias=bias),
+            nn.BatchNorm2d(in_channels),
+            activation)
+
+        self.main_conv2 = nn.Sequential(
+            nn.Conv2d(in_channels, out_channels, kernel_size=1, bias=bias),
+            nn.BatchNorm2d(out_channels),
+            activation)
+
+        # Remember that the stride is the same as the kernel_size, just like
+        # the max pooling layers
+        self.main_unpool1 = nn.MaxUnpool2d(kernel_size=2)
+
+        # Extension branch - regular convolution, followed by a regular, dilated or
+        # asymmetric convolution, followed by another regular convolution. Number
+        # of channels is doubled.
+
+        # regular convolution
+        self.ext_conv1 = nn.Sequential(
+            nn.Conv2d(
+                in_channels, internal_channels, 
+                kernel_size=kernel_size,
+                stride=1,
+                padding=padding,
+                bias=bias), nn.BatchNorm2d(internal_channels), activation)
+
+        # Transposed convolution
+        self.ext_conv2 = nn.Sequential(
+            nn.ConvTranspose2d(
+                internal_channels,
+                internal_channels,
+                kernel_size=kernel_size,
+                stride=2,
+                padding=padding,
+                output_padding=1,
+                bias=bias), nn.BatchNorm2d(internal_channels), activation)
+
+        # regular expansion convolution
+        self.ext_conv3 = nn.Sequential(
+            nn.Conv2d(
+                internal_channels, out_channels,
+                kernel_size=kernel_size,
+                stride=1,
+                padding=padding,
+                bias=bias), nn.BatchNorm2d(out_channels), activation)
+
+        # PReLU layer to apply after concatenating the branches
+        # self.out_prelu = activation
+
+    def forward(self, x, max_indices):
+        # Main branch shortcut
+        main = self.main_conv1(x)
+        main = self.main_conv2(main)
+        main = self.main_unpool1(main, max_indices)
+        # Extension branch
+        ext = self.ext_conv1(x)
+        ext = self.ext_conv2(ext)
+        ext = self.ext_conv3(ext)
+
+        # Add main and extension branches
+        out = main + ext
+
+        # return self.out_prelu(out)
+        return out
 
 class MinENet(nn.Module):
     """Generate the MinENet model.
