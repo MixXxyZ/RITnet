@@ -256,6 +256,7 @@ class RegularBottleneck_decode_minenet(nn.Module):
                  kernel_size=3,
                  padding=0,
                  dilation=1,
+                 dropout_prob=0,
                  bias=False,
                  relu=True):
         super().__init__()
