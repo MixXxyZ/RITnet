@@ -814,7 +814,7 @@ class MinENet(nn.Module):
 
     def forward(self, x):
         # Initial block
-        x = self.initial_block(x, relu=False)
+        x = self.initial_block(x)
 
         # Stage 1 - Encoder
         x, max_indices1_0 = self.downsample1_0(x)
