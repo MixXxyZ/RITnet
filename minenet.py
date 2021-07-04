@@ -780,13 +780,13 @@ class MinENet(nn.Module):
 
         # Stage 5 - Decoder
         self.upsample5_0 = UpsamplingBottleneck_minenet(
-            64, 64, padding=1, dropout_prob=0, relu=decoder_relu)
+            64, 16, padding=1, dropout_prob=0, relu=decoder_relu)
         self.module_list.append(self.upsample5_0)
         self.regular5_1 = RegularBottleneck_decode_minenet(
-            64, padding=1, dropout_prob=0, relu=decoder_relu)
+            16, padding=1, dropout_prob=0, relu=decoder_relu)
         self.module_list.append(self.regular5_1)
         self.transposed_conv = nn.ConvTranspose2d(
-            64,
+            16,
             num_classes,
             kernel_size=3,
             stride=2,
